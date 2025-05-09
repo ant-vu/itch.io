@@ -1,0 +1,4 @@
+[[actions]]
+name = "web"
+path = "dist"
+kind = "html" 
