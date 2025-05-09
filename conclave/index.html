@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conclave</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+        
+        .card {
+            position: absolute;
+            width: 300px;
+            height: 400px;
+            border-radius: 10px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.5s;
+        }
+        
+        .card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+        }
+        
+        .card .info {
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .swipe-left {
+            transform: translateX(-1000px) rotate(-30deg);
+            transition: transform 0.5s;
+        }
+        
+        .swipe-right {
+            transform: translateX(1000px) rotate(30deg);
+            transition: transform 0.5s;
+        }
+    </style>
+</head>
+<body>
+    <div id="card-container"></div>
+    <script>
+        // Sample data for conclave cards
+        const cards = [
+            {
+                name: "Cardinal 1",
+                image: "https://picsum.photos/200/300",
+                description: "Known for his conservative views",
+                stance: "Tradition"
+            },
+            {
+                name: "Cardinal 2",
+                image: "https://picsum.photos/200/301",
+                description: "Favors a more progressive approach",
+                stance: "Reform"
+            },
+            {
+                name: "Cardinal 3",
+                image: "https://picsum.photos/200/302",
+                description: "Respected for his diplomatic skills",
+                stance: "Moderate"
+            }
+        ];
+
+        let currentCardIndex = 0;
+        const cardContainer = document.getElementById("card-container");
+
+        // Function to create a card
+        function createCard(card) {
+            const cardElement = document.createElement("div");
+            cardElement.classList.add("card");
+            cardElement.innerHTML = `
+                <img src="${card.image}" alt="${card.name}">
+                <div class="info">
+                    <h2>${card.name}</h2>
+                    <p>${card.description}</p>
+                    <p>Stance: ${card.stance}</p>
+                </div>
+            `;
+            return cardElement;
+        }
+
+        // Function to swipe card
+        function swipeCard(direction) {
+            const currentCard = cardContainer.children[0];
+            if (direction === "left") {
+                currentCard.classList.add("swipe-left");
+            } else if (direction === "right") {
+                currentCard.classList.add("swipe-right");
+            }
+            setTimeout(() => {
+                currentCard.remove();
+                renderNextCard();
+            }, 500);
+        }
+
+        // Function to render next card
+        function renderNextCard() {
+            if (currentCardIndex < cards.length) {
+                const nextCard = createCard(cards[currentCardIndex]);
+                cardContainer.appendChild(nextCard);
+                currentCardIndex++;
+
+                // Add event listeners for swipe gestures
+                nextCard.addEventListener("touchstart", (e) => {
+                    const touch = e.touches[0];
+                    const startX = touch.clientX;
+
+                    nextCard.addEventListener("touchmove", (e) => {
+                        const touch = e.touches[0];
+                        const currentX = touch.clientX;
+                        const diff = currentX - startX;
+
+                        if (diff > 50) {
+                            swipeCard("right");
+                        } else if (diff < -50) {
+                            swipeCard("left");
+                        }
+                    });
+                });
+
+                // Add event listeners for mouse gestures
+                nextCard.addEventListener("mousedown", (e) => {
+                    const startX = e.clientX;
+
+                    nextCard.addEventListener("mousemove", (e) => {
+                        const currentX = e.clientX;
+                        const diff = currentX - startX;
+
+                        if (diff > 50) {
+                            swipeCard("right");
+                        } else if (diff < -50) {
+                            swipeCard("left");
+                        }
+                    });
+
+                    nextCard.addEventListener("mouseup", () => {
+                        nextCard.removeEventListener("mousemove", () => {});
+                    });
+                });
+            }
+        }
+
+        // Render first card
+        renderNextCard();
+    </script>
+</body>
+</html>
