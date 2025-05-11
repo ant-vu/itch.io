@@ -18,7 +18,7 @@ Each project directory contains its own setup instructions and dependencies. Ple
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/antvu/itch.io.git
+git clone https://github.com/ant-vu/itch.io.git
 cd itch.io
 ```
 
@@ -38,4 +38,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 Anthony Vu
 
-Project Link: [https://github.com/antvu/itch.io](https://github.com/antvu/itch.io) 
+Project Link: [https://github.com/ant-vu/itch.io](https://github.com/ant-vu/itch.io) 
