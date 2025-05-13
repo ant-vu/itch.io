@@ -128,14 +128,102 @@
             background: #4CAF50;
             transition: width 0.3s;
         }
+        
+        .event-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 1000;
+            max-width: 400px;
+            text-align: center;
+            display: none;
+        }
+        
+        .faction-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+        }
+        
+        .trait {
+            display: inline-block;
+            padding: 3px 8px;
+            margin: 2px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .achievement {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .faction-stats {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        .faction-bar {
+            height: 5px;
+            background: #333;
+            margin-top: 5px;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .faction-progress {
+            height: 100%;
+            transition: width 0.3s;
+        }
     </style>
 </head>
 <body>
+    <div class="faction-stats">
+        <h3>Faction Support</h3>
+        <div class="faction">
+            <div>Traditionalists</div>
+            <div class="faction-bar">
+                <div class="faction-progress" id="traditionalist-support" style="width: 33%; background: #8B4513;"></div>
+            </div>
+        </div>
+        <div class="faction">
+            <div>Reformists</div>
+            <div class="faction-bar">
+                <div class="faction-progress" id="reformist-support" style="width: 33%; background: #4CAF50;"></div>
+            </div>
+        </div>
+        <div class="faction">
+            <div>Moderates</div>
+            <div class="faction-bar">
+                <div class="faction-progress" id="moderate-support" style="width: 34%; background: #2196F3;"></div>
+            </div>
+        </div>
+    </div>
+
     <div class="score-panel">
         <h3>Score: <span id="score">0</span></h3>
         <div class="progress-bar">
             <div class="progress" id="progress"></div>
         </div>
+        <div id="achievements"></div>
     </div>
     
     <div class="game-container">
@@ -147,7 +235,64 @@
         <button class="control-btn" onclick="swipeCard('right')">Elect</button>
     </div>
 
+    <div class="event-popup" id="event-popup">
+        <h3 id="event-title"></h3>
+        <p id="event-description"></p>
+        <button class="control-btn" onclick="closeEvent()">Continue</button>
+    </div>
+
     <script>
+        // Historical events that can occur during the conclave
+        const events = [
+            {
+                title: "Vatican Archives Discovery",
+                description: "Ancient documents reveal new insights about church history. How will this affect the election?",
+                effect: (card) => {
+                    if (card.stance === "Traditionalist") {
+                        card.influence += 10;
+                    }
+                }
+            },
+            {
+                title: "Global Crisis",
+                description: "A major world event requires strong leadership. Diplomacy becomes more important.",
+                effect: (card) => {
+                    card.diplomacy += 5;
+                }
+            },
+            {
+                title: "Reform Movement",
+                description: "Growing calls for church reform shift the political landscape.",
+                effect: (card) => {
+                    if (card.stance === "Reformist") {
+                        card.influence += 15;
+                    }
+                }
+            }
+        ];
+
+        // Achievements system
+        const achievements = [
+            {
+                id: "traditionalist_win",
+                title: "Guardian of Tradition",
+                description: "Elect a Traditionalist cardinal",
+                check: (card) => card.stance === "Traditionalist"
+            },
+            {
+                id: "reformist_win",
+                title: "Agent of Change",
+                description: "Elect a Reformist cardinal",
+                check: (card) => card.stance === "Reformist"
+            },
+            {
+                id: "high_score",
+                title: "Master Strategist",
+                description: "Reach 1000 points",
+                check: () => score >= 1000
+            }
+        ];
+
         // Enhanced card data with more properties
         const cards = [
             {
@@ -159,7 +304,10 @@
                 diplomacy: 70,
                 charisma: 65,
                 experience: 90,
-                scandals: 0
+                scandals: 0,
+                faction: "Traditionalist",
+                traits: ["Scholar", "Traditionalist"],
+                specialAbility: "Can sway traditionalist votes more effectively"
             },
             {
                 name: "Cardinal Francesco",
@@ -170,7 +318,10 @@
                 diplomacy: 85,
                 charisma: 80,
                 experience: 75,
-                scandals: 1
+                scandals: 1,
+                faction: "Reformist",
+                traits: ["Diplomat", "Modernist"],
+                specialAbility: "Gains bonus points for diplomatic decisions"
             },
             {
                 name: "Cardinal Marco",
@@ -181,7 +332,10 @@
                 diplomacy: 90,
                 charisma: 75,
                 experience: 85,
-                scandals: 0
+                scandals: 0,
+                faction: "Moderate",
+                traits: ["Peacemaker", "Balanced"],
+                specialAbility: "Can bridge gaps between factions"
             },
             {
                 name: "Cardinal Antonio",
@@ -192,26 +346,119 @@
                 diplomacy: 65,
                 charisma: 90,
                 experience: 70,
-                scandals: 2
+                scandals: 2,
+                faction: "Reformist",
+                traits: ["Charismatic", "Controversial"],
+                specialAbility: "Can rally support despite scandals"
             }
         ];
 
         let currentCardIndex = 0;
         let score = 0;
+        let factionSupport = {
+            Traditionalist: 33,
+            Reformist: 33,
+            Moderate: 34
+        };
+        let unlockedAchievements = new Set();
         const cardContainer = document.getElementById("card-container");
         const scoreElement = document.getElementById("score");
         const progressElement = document.getElementById("progress");
+        const eventPopup = document.getElementById("event-popup");
 
-        function updateScore(points) {
-            score += points;
-            scoreElement.textContent = score;
-            progressElement.style.width = `${(currentCardIndex / cards.length) * 100}%`;
+        function updateFactionSupport(card, direction) {
+            if (direction === "right") {
+                factionSupport[card.faction] += 10;
+                // Redistribute other factions
+                const otherFactions = Object.keys(factionSupport).filter(f => f !== card.faction);
+                otherFactions.forEach(faction => {
+                    factionSupport[faction] = Math.max(0, factionSupport[faction] - 5);
+                });
+            }
+            updateFactionBars();
+        }
+
+        function updateFactionBars() {
+            Object.keys(factionSupport).forEach(faction => {
+                const element = document.getElementById(`${faction.toLowerCase()}-support`);
+                if (element) {
+                    element.style.width = `${factionSupport[faction]}%`;
+                }
+            });
+        }
+
+        function showEvent() {
+            if (Math.random() < 0.3) { // 30% chance of event
+                const event = events[Math.floor(Math.random() * events.length)];
+                document.getElementById("event-title").textContent = event.title;
+                document.getElementById("event-description").textContent = event.description;
+                eventPopup.style.display = "block";
+                return event;
+            }
+            return null;
+        }
+
+        function closeEvent() {
+            eventPopup.style.display = "none";
+        }
+
+        function checkAchievements(card) {
+            achievements.forEach(achievement => {
+                if (!unlockedAchievements.has(achievement.id) && achievement.check(card)) {
+                    unlockedAchievements.add(achievement.id);
+                    showAchievement(achievement);
+                }
+            });
+        }
+
+        function showAchievement(achievement) {
+            const achievementElement = document.createElement("div");
+            achievementElement.className = "achievement";
+            achievementElement.innerHTML = `
+                <h4>🏆 ${achievement.title}</h4>
+                <p>${achievement.description}</p>
+            `;
+            document.getElementById("achievements").appendChild(achievementElement);
+            achievementElement.style.display = "block";
+            setTimeout(() => {
+                achievementElement.style.display = "none";
+            }, 3000);
+        }
+
+        function calculateScore(card, direction) {
+            let points = 0;
+            if (direction === "right") {
+                // Electing a cardinal
+                points += card.influence * 0.5;
+                points += card.diplomacy * 0.3;
+                points += card.charisma * 0.2;
+                points -= card.scandals * 20;
+                
+                // Faction bonus
+                points += factionSupport[card.faction] * 0.5;
+                
+                // Trait bonuses
+                if (card.traits.includes("Scholar")) points += 20;
+                if (card.traits.includes("Diplomat")) points += 25;
+                if (card.traits.includes("Peacemaker")) points += 30;
+            } else {
+                // Rejecting a cardinal
+                points += card.scandals * 10;
+                if (card.stance === "Traditionalist") points += 20;
+                
+                // Faction penalty
+                points -= factionSupport[card.faction] * 0.3;
+            }
+            return Math.round(points);
         }
 
         function createCard(card) {
             const cardElement = document.createElement("div");
             cardElement.classList.add("card");
             cardElement.innerHTML = `
+                <div class="faction-indicator" style="background: ${getFactionColor(card.faction)}">
+                    ${card.faction}
+                </div>
                 <img src="${card.image}" alt="${card.name}">
                 <div class="info">
                     <h2>${card.name}</h2>
@@ -224,25 +471,22 @@
                         <div class="stat">Experience: ${card.experience}</div>
                         <div class="stat">Scandals: ${card.scandals}</div>
                     </div>
+                    <div class="traits">
+                        ${card.traits.map(trait => `<span class="trait">${trait}</span>`).join('')}
+                    </div>
+                    <p class="special-ability"><em>${card.specialAbility}</em></p>
                 </div>
             `;
             return cardElement;
         }
 
-        function calculateScore(card, direction) {
-            let points = 0;
-            if (direction === "right") {
-                // Electing a cardinal
-                points += card.influence * 0.5;
-                points += card.diplomacy * 0.3;
-                points += card.charisma * 0.2;
-                points -= card.scandals * 20;
-            } else {
-                // Rejecting a cardinal
-                points += card.scandals * 10;
-                if (card.stance === "Traditionalist") points += 20;
-            }
-            return Math.round(points);
+        function getFactionColor(faction) {
+            const colors = {
+                Traditionalist: "#8B4513",
+                Reformist: "#4CAF50",
+                Moderate: "#2196F3"
+            };
+            return colors[faction] || "#666";
         }
 
         function swipeCard(direction) {
@@ -252,6 +496,8 @@
             const card = cards[currentCardIndex - 1];
             const points = calculateScore(card, direction);
             updateScore(points);
+            updateFactionSupport(card, direction);
+            checkAchievements(card);
 
             if (direction === "left") {
                 currentCard.classList.add("swipe-left");
@@ -261,8 +507,18 @@
 
             setTimeout(() => {
                 currentCard.remove();
+                const event = showEvent();
+                if (event) {
+                    event.effect(card);
+                }
                 renderNextCard();
             }, 500);
+        }
+
+        function updateScore(points) {
+            score += points;
+            scoreElement.textContent = score;
+            progressElement.style.width = `${(currentCardIndex / cards.length) * 100}%`;
         }
 
         function renderNextCard() {
