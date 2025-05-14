@@ -311,6 +311,37 @@
                         card.influence += 15;
                     }
                 }
+            },
+            {
+                title: "Vatican Finances Scandal",
+                description: "A financial scandal rocks the Vatican. How will this affect the candidates?",
+                effect: (card) => {
+                    if (card.traits.includes("Financial Expert")) {
+                        card.influence += 20;
+                    } else {
+                        card.scandals += 1;
+                    }
+                }
+            },
+            {
+                title: "Ecumenical Summit",
+                description: "A major interfaith conference approaches. Leadership skills are crucial.",
+                effect: (card) => {
+                    if (card.traits.includes("Diplomat")) {
+                        card.diplomacy += 15;
+                    }
+                }
+            },
+            {
+                title: "Traditional Rites Debate",
+                description: "A heated debate about traditional ceremonies divides the conclave.",
+                effect: (card) => {
+                    if (card.stance === "Traditionalist") {
+                        card.influence += 12;
+                    } else if (card.stance === "Reformist") {
+                        card.influence -= 8;
+                    }
+                }
             }
         ];
 
@@ -333,6 +364,27 @@
                 title: "Master Strategist",
                 description: "Reach 1000 points",
                 check: () => score >= 1000
+            },
+            {
+                id: "perfect_balance",
+                title: "Perfect Balance",
+                description: "Maintain equal faction support for 3 turns",
+                check: () => {
+                    const values = Object.values(factionSupport);
+                    return values.every(v => v === values[0]);
+                }
+            },
+            {
+                id: "scandal_free",
+                title: "Clean Hands",
+                description: "Complete a conclave without electing any cardinals with scandals",
+                check: (card) => card.scandals === 0
+            },
+            {
+                id: "power_master",
+                title: "Power Master",
+                description: "Use all special abilities in a single conclave",
+                check: () => usedPowers.size === 3
             }
         ];
 
@@ -349,8 +401,9 @@
                 experience: 90,
                 scandals: 0,
                 faction: "Traditionalist",
-                traits: ["Scholar", "Traditionalist"],
-                specialAbility: "Can sway traditionalist votes more effectively"
+                traits: ["Scholar", "Traditionalist", "Theologian"],
+                specialAbility: "Can sway traditionalist votes more effectively",
+                power: "Divine Inspiration"
             },
             {
                 name: "Cardinal Francesco",
@@ -363,8 +416,9 @@
                 experience: 75,
                 scandals: 1,
                 faction: "Reformist",
-                traits: ["Diplomat", "Modernist"],
-                specialAbility: "Gains bonus points for diplomatic decisions"
+                traits: ["Diplomat", "Modernist", "Financial Expert"],
+                specialAbility: "Gains bonus points for diplomatic decisions",
+                power: "Reform Wave"
             },
             {
                 name: "Cardinal Marco",
@@ -377,8 +431,9 @@
                 experience: 85,
                 scandals: 0,
                 faction: "Moderate",
-                traits: ["Peacemaker", "Balanced"],
-                specialAbility: "Can bridge gaps between factions"
+                traits: ["Peacemaker", "Balanced", "Mediator"],
+                specialAbility: "Can bridge gaps between factions",
+                power: "Unity Call"
             },
             {
                 name: "Cardinal Antonio",
@@ -391,8 +446,39 @@
                 experience: 70,
                 scandals: 2,
                 faction: "Reformist",
-                traits: ["Charismatic", "Controversial"],
-                specialAbility: "Can rally support despite scandals"
+                traits: ["Charismatic", "Controversial", "Orator"],
+                specialAbility: "Can rally support despite scandals",
+                power: "Charismatic Surge"
+            },
+            {
+                name: "Cardinal Sophia",
+                image: "https://picsum.photos/200/304",
+                description: "Brilliant theologian with a progressive vision for the church.",
+                stance: "Reformist",
+                influence: 88,
+                diplomacy: 75,
+                charisma: 82,
+                experience: 80,
+                scandals: 0,
+                faction: "Reformist",
+                traits: ["Scholar", "Visionary", "Theologian"],
+                specialAbility: "Can influence multiple factions simultaneously",
+                power: "Visionary Insight"
+            },
+            {
+                name: "Cardinal Benedict",
+                image: "https://picsum.photos/200/305",
+                description: "Staunch defender of traditional values and church doctrine.",
+                stance: "Traditionalist",
+                influence: 92,
+                diplomacy: 68,
+                charisma: 72,
+                experience: 95,
+                scandals: 0,
+                faction: "Traditionalist",
+                traits: ["Traditionalist", "Scholar", "Defender"],
+                specialAbility: "Can strengthen traditionalist support",
+                power: "Doctrinal Shield"
             }
         ];
 
@@ -404,10 +490,75 @@
             Moderate: 34
         };
         let unlockedAchievements = new Set();
+        let usedPowers = new Set();
+        let decisionHistory = [];
         const cardContainer = document.getElementById("card-container");
         const scoreElement = document.getElementById("score");
         const progressElement = document.getElementById("progress");
         const eventPopup = document.getElementById("event-popup");
+
+        // Add history log element
+        const historyLog = document.createElement("div");
+        historyLog.className = "history-log";
+        historyLog.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            width: 300px;
+            font-size: 0.9em;
+        `;
+        document.body.appendChild(historyLog);
+
+        function addToHistory(card, decision) {
+            const entry = document.createElement("div");
+            entry.style.marginBottom = "10px";
+            entry.style.padding = "5px";
+            entry.style.borderBottom = "1px solid rgba(255, 255, 255, 0.1)";
+            entry.innerHTML = `
+                <strong>${card.name}</strong> was ${decision === "right" ? "elected" : "rejected"}
+                <br>
+                <small>Score: ${calculateScore(card, decision)}</small>
+            `;
+            historyLog.insertBefore(entry, historyLog.firstChild);
+            decisionHistory.push({ card, decision, score: calculateScore(card, decision) });
+        }
+
+        function usePower(card) {
+            if (usedPowers.has(card.power)) return false;
+            
+            switch(card.power) {
+                case "Divine Inspiration":
+                    factionSupport.Traditionalist += 15;
+                    break;
+                case "Reform Wave":
+                    factionSupport.Reformist += 15;
+                    break;
+                case "Unity Call":
+                    Object.keys(factionSupport).forEach(faction => {
+                        factionSupport[faction] = 33;
+                    });
+                    break;
+                case "Charismatic Surge":
+                    card.charisma += 20;
+                    break;
+                case "Visionary Insight":
+                    card.influence += 15;
+                    card.diplomacy += 15;
+                    break;
+                case "Doctrinal Shield":
+                    card.scandals = Math.max(0, card.scandals - 1);
+                    break;
+            }
+            
+            usedPowers.add(card.power);
+            updateFactionBars();
+            return true;
+        }
 
         function updateFactionSupport(card, direction) {
             if (direction === "right") {
@@ -518,6 +669,10 @@
                         ${card.traits.map(trait => `<span class="trait">${trait}</span>`).join('')}
                     </div>
                     <p class="special-ability"><em>${card.specialAbility}</em></p>
+                    <button class="control-btn" onclick="usePower(${JSON.stringify(card)})" 
+                            ${usedPowers.has(card.power) ? 'disabled' : ''}>
+                        Use ${card.power}
+                    </button>
                 </div>
             `;
             return cardElement;
@@ -541,6 +696,7 @@
             updateScore(points);
             updateFactionSupport(card, direction);
             checkAchievements(card);
+            addToHistory(card, direction);
 
             if (direction === "left") {
                 currentCard.classList.add("swipe-left");
