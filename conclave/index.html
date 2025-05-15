@@ -27,6 +27,111 @@
             perspective: 1000px;
         }
 
+        .tutorial-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .tutorial-content {
+            background: rgba(42, 42, 42, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        .reputation-indicator {
+            position: fixed;
+            top: 20px;
+            right: 200px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .reputation-bar {
+            width: 200px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            margin-top: 8px;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .reputation-progress {
+            height: 100%;
+            background: linear-gradient(90deg, #FFD700 0%, #FFA500 100%);
+            transition: width 0.3s ease;
+        }
+
+        .voting-round {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            z-index: 1000;
+            text-align: center;
+            display: none;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .faction-relations {
+            position: fixed;
+            top: 20px;
+            left: 340px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .relation-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 5px 0;
+        }
+
+        .relation-bar {
+            width: 150px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .relation-progress {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+
+        .visual-feedback {
+            position: fixed;
+            pointer-events: none;
+            z-index: 1000;
+            animation: fadeOut 1s forwards;
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-20px); }
+        }
+
         .card {
             position: absolute;
             width: 300px;
@@ -282,6 +387,50 @@
         <h3 id="event-title"></h3>
         <p id="event-description"></p>
         <button class="control-btn" onclick="closeEvent()">Continue</button>
+    </div>
+
+    <div class="reputation-indicator">
+        <h3>Vatican Reputation</h3>
+        <div class="reputation-bar">
+            <div class="reputation-progress" id="reputation-progress" style="width: 50%;"></div>
+        </div>
+    </div>
+
+    <div class="faction-relations">
+        <h3>Faction Relations</h3>
+        <div class="relation-indicator">
+            <span>Traditionalist-Reformist</span>
+            <div class="relation-bar">
+                <div class="relation-progress" id="trad-reform-relation" style="width: 50%; background: #FF4444;"></div>
+            </div>
+        </div>
+        <div class="relation-indicator">
+            <span>Traditionalist-Moderate</span>
+            <div class="relation-bar">
+                <div class="relation-progress" id="trad-moderate-relation" style="width: 60%; background: #FFAA44;"></div>
+            </div>
+        </div>
+        <div class="relation-indicator">
+            <span>Reformist-Moderate</span>
+            <div class="relation-bar">
+                <div class="relation-progress" id="reform-moderate-relation" style="width: 70%; background: #44FF44;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="voting-round" id="voting-round">
+        <h2>Special Voting Round</h2>
+        <p id="voting-round-description"></p>
+        <div id="voting-round-options"></div>
+    </div>
+
+    <div class="tutorial-overlay" id="tutorial-overlay">
+        <div class="tutorial-content">
+            <h2>Welcome to the Conclave</h2>
+            <p>As a cardinal elector, you must choose the next Pope wisely.</p>
+            <div id="tutorial-steps"></div>
+            <button class="control-btn" onclick="nextTutorialStep()">Next</button>
+        </div>
     </div>
 
     <script>
@@ -687,6 +836,159 @@
             return colors[faction] || "#666";
         }
 
+        let reputation = 50;
+        let factionRelations = {
+            "Traditionalist-Reformist": 50,
+            "Traditionalist-Moderate": 60,
+            "Reformist-Moderate": 70
+        };
+        let tutorialStep = 0;
+        let specialVotingRound = false;
+
+        const tutorialSteps = [
+            {
+                title: "Welcome to the Conclave",
+                content: "As a cardinal elector, you must choose the next Pope wisely. Each decision affects the future of the Church."
+            },
+            {
+                title: "Cardinal Profiles",
+                content: "Each cardinal has unique traits, abilities, and stances. Consider these carefully when making your choice."
+            },
+            {
+                title: "Faction Support",
+                content: "The three main factions - Traditionalist, Reformist, and Moderate - each have their own vision for the Church."
+            },
+            {
+                title: "Special Powers",
+                content: "Each cardinal has a unique power that can be used once per conclave. Use them strategically!"
+            },
+            {
+                title: "Reputation System",
+                content: "Your decisions affect the Vatican's reputation. Maintain a good reputation to unlock special events."
+            }
+        ];
+
+        function showTutorial() {
+            if (!localStorage.getItem('tutorialCompleted')) {
+                document.getElementById('tutorial-overlay').style.display = 'flex';
+                updateTutorialStep();
+            }
+        }
+
+        function updateTutorialStep() {
+            const step = tutorialSteps[tutorialStep];
+            document.getElementById('tutorial-steps').innerHTML = `
+                <h3>${step.title}</h3>
+                <p>${step.content}</p>
+            `;
+        }
+
+        function nextTutorialStep() {
+            tutorialStep++;
+            if (tutorialStep >= tutorialSteps.length) {
+                document.getElementById('tutorial-overlay').style.display = 'none';
+                localStorage.setItem('tutorialCompleted', 'true');
+            } else {
+                updateTutorialStep();
+            }
+        }
+
+        function updateReputation(points) {
+            reputation = Math.max(0, Math.min(100, reputation + points));
+            document.getElementById('reputation-progress').style.width = `${reputation}%`;
+            
+            // Check for reputation-based events
+            if (reputation >= 80 && Math.random() < 0.3) {
+                triggerSpecialVotingRound();
+            }
+        }
+
+        function updateFactionRelations(card, direction) {
+            const relations = {
+                "Traditionalist-Reformist": 0,
+                "Traditionalist-Moderate": 0,
+                "Reformist-Moderate": 0
+            };
+
+            if (direction === "right") {
+                if (card.faction === "Traditionalist") {
+                    relations["Traditionalist-Reformist"] -= 10;
+                    relations["Traditionalist-Moderate"] += 5;
+                } else if (card.faction === "Reformist") {
+                    relations["Traditionalist-Reformist"] -= 10;
+                    relations["Reformist-Moderate"] += 5;
+                } else if (card.faction === "Moderate") {
+                    relations["Traditionalist-Moderate"] += 5;
+                    relations["Reformist-Moderate"] += 5;
+                }
+            }
+
+            Object.keys(relations).forEach(relation => {
+                factionRelations[relation] = Math.max(0, Math.min(100, factionRelations[relation] + relations[relation]));
+                document.getElementById(relation.toLowerCase().replace('-', '-')).style.width = `${factionRelations[relation]}%`;
+            });
+        }
+
+        function triggerSpecialVotingRound() {
+            specialVotingRound = true;
+            const round = {
+                title: "Papal Conclave Crisis",
+                description: "A major decision must be made that will affect the future of the Church.",
+                options: [
+                    {
+                        text: "Maintain Traditional Values",
+                        effect: () => {
+                            factionSupport.Traditionalist += 15;
+                            reputation += 10;
+                        }
+                    },
+                    {
+                        text: "Embrace Modern Reforms",
+                        effect: () => {
+                            factionSupport.Reformist += 15;
+                            reputation += 10;
+                        }
+                    },
+                    {
+                        text: "Seek Middle Ground",
+                        effect: () => {
+                            factionSupport.Moderate += 15;
+                            reputation += 5;
+                        }
+                    }
+                ]
+            };
+
+            document.getElementById('voting-round').style.display = 'block';
+            document.getElementById('voting-round-description').textContent = round.description;
+            
+            const optionsContainer = document.getElementById('voting-round-options');
+            optionsContainer.innerHTML = '';
+            round.options.forEach(option => {
+                const button = document.createElement('button');
+                button.className = 'control-btn';
+                button.textContent = option.text;
+                button.onclick = () => {
+                    option.effect();
+                    document.getElementById('voting-round').style.display = 'none';
+                    specialVotingRound = false;
+                    updateFactionBars();
+                };
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        function showVisualFeedback(text, x, y, color = '#fff') {
+            const feedback = document.createElement('div');
+            feedback.className = 'visual-feedback';
+            feedback.textContent = text;
+            feedback.style.color = color;
+            feedback.style.left = `${x}px`;
+            feedback.style.top = `${y}px`;
+            document.body.appendChild(feedback);
+            setTimeout(() => feedback.remove(), 1000);
+        }
+
         function swipeCard(direction) {
             const currentCard = cardContainer.children[0];
             if (!currentCard) return;
@@ -695,8 +997,19 @@
             const points = calculateScore(card, direction);
             updateScore(points);
             updateFactionSupport(card, direction);
+            updateFactionRelations(card, direction);
+            updateReputation(points * 0.1);
             checkAchievements(card);
             addToHistory(card, direction);
+
+            // Show visual feedback
+            const rect = currentCard.getBoundingClientRect();
+            showVisualFeedback(
+                `${points > 0 ? '+' : ''}${points}`,
+                rect.left + rect.width / 2,
+                rect.top + rect.height / 2,
+                points > 0 ? '#4CAF50' : '#FF4444'
+            );
 
             if (direction === "left") {
                 currentCard.classList.add("swipe-left");
@@ -789,7 +1102,8 @@
             }
         }
 
-        // Start the game
+        // Start the game with tutorial
+        showTutorial();
         renderNextCard();
     </script>
 </body>
