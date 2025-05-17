@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Word Ladder Puzzle</title>
+    <title>Word Ladder Challenge</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -12,39 +12,57 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background: linear-gradient(135deg, #1a2a6c 0%, #b21f1f 50%, #fdbb2d 100%);
             padding: 20px;
+            color: #fff;
         }
 
         .container {
-            background: white;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
             padding: 2rem;
             border-radius: 15px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            max-width: 600px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
             width: 90%;
         }
 
         h1 {
-            color: #2c3e50;
+            color: #fff;
             text-align: center;
             margin-bottom: 1.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
         }
 
         .game-info {
             text-align: center;
             margin-bottom: 1rem;
-            color: #34495e;
+            color: #fff;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+
+        .stat-item {
+            text-align: center;
         }
 
         .word-display {
-            font-size: 1.5rem;
+            font-size: 2rem;
             text-align: center;
             margin: 1rem 0;
             padding: 1rem;
-            background: #f8f9fa;
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 8px;
             min-height: 60px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
         }
 
         .input-section {
@@ -55,49 +73,59 @@
         }
 
         input {
-            padding: 0.5rem;
-            font-size: 1rem;
-            border: 2px solid #ddd;
-            border-radius: 4px;
+            padding: 0.8rem;
+            font-size: 1.2rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
             width: 200px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
         }
 
         button {
-            padding: 0.5rem 1rem;
-            font-size: 1rem;
-            background: #3498db;
+            padding: 0.8rem 1.5rem;
+            font-size: 1.1rem;
+            background: rgba(255, 255, 255, 0.2);
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
-            transition: background 0.3s;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         button:hover {
-            background: #2980b9;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
         }
 
         .message {
             text-align: center;
             margin: 1rem 0;
-            padding: 0.5rem;
-            border-radius: 4px;
+            padding: 1rem;
+            border-radius: 8px;
+            font-weight: bold;
         }
 
         .success {
-            background: #d4edda;
-            color: #155724;
+            background: rgba(40, 167, 69, 0.2);
+            color: #fff;
         }
 
         .error {
-            background: #f8d7da;
-            color: #721c24;
+            background: rgba(220, 53, 69, 0.2);
+            color: #fff;
         }
 
         .word-history {
             margin-top: 1rem;
             padding: 1rem;
-            background: #f8f9fa;
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 8px;
             max-height: 200px;
             overflow-y: auto;
@@ -105,7 +133,7 @@
 
         .word-history p {
             margin: 0.5rem 0;
-            color: #666;
+            color: #fff;
         }
 
         .controls {
@@ -115,25 +143,80 @@
             margin-top: 1rem;
         }
 
-        .controls button {
-            background: #2ecc71;
+        .difficulty-selector {
+            margin: 1rem 0;
+            text-align: center;
         }
 
-        .controls button:hover {
-            background: #27ae60;
+        .difficulty-selector select {
+            padding: 0.5rem;
+            font-size: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00c6ff 0%, #0072ff 100%);
+            transition: width 0.3s ease;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .word-display.pulse {
+            animation: pulse 0.5s ease;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Word Ladder Puzzle</h1>
+        <h1>Word Ladder Challenge</h1>
         <div class="game-info">
             <p>Transform the start word into the target word by changing one letter at a time!</p>
             <p>Each new word must be a valid English word.</p>
         </div>
+        <div class="difficulty-selector">
+            <select id="difficulty" onchange="changeDifficulty()">
+                <option value="easy">Easy (4 letters)</option>
+                <option value="medium">Medium (5 letters)</option>
+                <option value="hard">Hard (6 letters)</option>
+            </select>
+        </div>
+        <div class="stats">
+            <div class="stat-item">
+                <div>Score</div>
+                <div id="score">0</div>
+            </div>
+            <div class="stat-item">
+                <div>Time</div>
+                <div id="timer">60</div>
+            </div>
+            <div class="stat-item">
+                <div>Moves</div>
+                <div id="moves">0</div>
+            </div>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressBar"></div>
+        </div>
         <div class="word-display" id="currentWord"></div>
         <div class="input-section">
-            <input type="text" id="wordInput" placeholder="Enter your word" maxlength="4">
+            <input type="text" id="wordInput" placeholder="Enter your word" maxlength="6">
             <button onclick="submitWord()">Submit</button>
         </div>
         <div class="message" id="message"></div>
@@ -141,29 +224,62 @@
         <div class="controls">
             <button onclick="newGame()">New Game</button>
             <button onclick="showHint()">Hint</button>
+            <button onclick="toggleSound()">Sound: On</button>
         </div>
     </div>
 
     <script>
-        const words = [
-            ['cold', 'warm'],
-            ['love', 'hate'],
-            ['head', 'tail'],
-            ['dark', 'light'],
-            ['left', 'right']
-        ];
+        const words = {
+            easy: [
+                ['cold', 'warm'],
+                ['love', 'hate'],
+                ['head', 'tail'],
+                ['dark', 'light'],
+                ['left', 'right']
+            ],
+            medium: [
+                ['heart', 'brain'],
+                ['water', 'steam'],
+                ['night', 'light'],
+                ['happy', 'sadly'],
+                ['start', 'finish']
+            ],
+            hard: [
+                ['planet', 'galaxy'],
+                ['winter', 'summer'],
+                ['silent', 'listen'],
+                ['garden', 'flower'],
+                ['dragon', 'phoenix']
+            ]
+        };
 
         let currentPair;
         let currentWord;
         let targetWord;
         let wordHistory = [];
+        let score = 0;
+        let moves = 0;
+        let timeLeft = 60;
+        let timer;
+        let soundEnabled = true;
+        let currentDifficulty = 'easy';
+
+        const correctSound = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU');
+        const errorSound = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU');
+        const winSound = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU');
 
         function initGame() {
-            currentPair = words[Math.floor(Math.random() * words.length)];
+            currentDifficulty = document.getElementById('difficulty').value;
+            const wordList = words[currentDifficulty];
+            currentPair = wordList[Math.floor(Math.random() * wordList.length)];
             currentWord = currentPair[0];
             targetWord = currentPair[1];
             wordHistory = [currentWord];
+            moves = 0;
+            timeLeft = 60;
             updateDisplay();
+            startTimer();
+            updateProgressBar();
         }
 
         function updateDisplay() {
@@ -172,12 +288,18 @@
                 .map((word, index) => `<p>${index + 1}. ${word}</p>`)
                 .join('');
             document.getElementById('wordInput').value = '';
+            document.getElementById('score').textContent = score;
+            document.getElementById('moves').textContent = moves;
+            document.getElementById('timer').textContent = timeLeft;
         }
 
         function showMessage(text, isError = false) {
             const messageDiv = document.getElementById('message');
             messageDiv.textContent = text;
             messageDiv.className = `message ${isError ? 'error' : 'success'}`;
+            if (soundEnabled) {
+                (isError ? errorSound : correctSound).play();
+            }
             setTimeout(() => {
                 messageDiv.textContent = '';
                 messageDiv.className = 'message';
@@ -185,9 +307,8 @@
         }
 
         function isValidWord(word) {
-            // In a real implementation, you would check against a dictionary
-            // For this demo, we'll just check if it's a 4-letter word
-            return word.length === 4 && /^[a-zA-Z]+$/.test(word);
+            const length = currentDifficulty === 'easy' ? 4 : currentDifficulty === 'medium' ? 5 : 6;
+            return word.length === length && /^[a-zA-Z]+$/.test(word);
         }
 
         function differsByOneLetter(word1, word2) {
@@ -204,7 +325,7 @@
             const input = document.getElementById('wordInput').value.toLowerCase();
             
             if (!isValidWord(input)) {
-                showMessage('Please enter a valid 4-letter word', true);
+                showMessage(`Please enter a valid ${currentDifficulty === 'easy' ? '4' : currentDifficulty === 'medium' ? '5' : '6'}-letter word`, true);
                 return;
             }
 
@@ -220,10 +341,21 @@
 
             currentWord = input;
             wordHistory.push(input);
+            moves++;
+            score += 10;
             updateDisplay();
+            updateProgressBar();
+
+            const wordDisplay = document.getElementById('currentWord');
+            wordDisplay.classList.add('pulse');
+            setTimeout(() => wordDisplay.classList.remove('pulse'), 500);
 
             if (input === targetWord) {
-                showMessage('Congratulations! You solved the puzzle!');
+                if (soundEnabled) winSound.play();
+                clearInterval(timer);
+                const timeBonus = timeLeft * 2;
+                score += timeBonus;
+                showMessage(`Congratulations! You solved the puzzle! +${timeBonus} time bonus!`);
                 setTimeout(() => {
                     if (confirm('Would you like to play again?')) {
                         newGame();
@@ -233,6 +365,7 @@
         }
 
         function newGame() {
+            clearInterval(timer);
             initGame();
             showMessage('New game started!');
         }
@@ -256,6 +389,38 @@
             const s = ['th', 'st', 'nd', 'rd'];
             const v = n % 100;
             return s[(v - 20) % 10] || s[v] || s[0];
+        }
+
+        function startTimer() {
+            clearInterval(timer);
+            timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer').textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    showMessage('Time\'s up! Game over!', true);
+                    setTimeout(() => {
+                        if (confirm('Would you like to play again?')) {
+                            newGame();
+                        }
+                    }, 1000);
+                }
+            }, 1000);
+        }
+
+        function updateProgressBar() {
+            const progress = (wordHistory.length - 1) / (currentWord.length + 1) * 100;
+            document.getElementById('progressBar').style.width = `${Math.min(progress, 100)}%`;
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const button = document.querySelector('.controls button:last-child');
+            button.textContent = `Sound: ${soundEnabled ? 'On' : 'Off'}`;
+        }
+
+        function changeDifficulty() {
+            newGame();
         }
 
         // Initialize the game when the page loads
