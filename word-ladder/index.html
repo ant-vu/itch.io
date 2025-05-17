@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Ladder Puzzle</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 90%;
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .game-info {
+            text-align: center;
+            margin-bottom: 1rem;
+            color: #34495e;
+        }
+
+        .word-display {
+            font-size: 1.5rem;
+            text-align: center;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            min-height: 60px;
+        }
+
+        .input-section {
+            display: flex;
+            gap: 10px;
+            margin: 1rem 0;
+            justify-content: center;
+        }
+
+        input {
+            padding: 0.5rem;
+            font-size: 1rem;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            width: 200px;
+        }
+
+        button {
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        .message {
+            text-align: center;
+            margin: 1rem 0;
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .word-history {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .word-history p {
+            margin: 0.5rem 0;
+            color: #666;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+
+        .controls button {
+            background: #2ecc71;
+        }
+
+        .controls button:hover {
+            background: #27ae60;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Word Ladder Puzzle</h1>
+        <div class="game-info">
+            <p>Transform the start word into the target word by changing one letter at a time!</p>
+            <p>Each new word must be a valid English word.</p>
+        </div>
+        <div class="word-display" id="currentWord"></div>
+        <div class="input-section">
+            <input type="text" id="wordInput" placeholder="Enter your word" maxlength="4">
+            <button onclick="submitWord()">Submit</button>
+        </div>
+        <div class="message" id="message"></div>
+        <div class="word-history" id="wordHistory"></div>
+        <div class="controls">
+            <button onclick="newGame()">New Game</button>
+            <button onclick="showHint()">Hint</button>
+        </div>
+    </div>
+
+    <script>
+        const words = [
+            ['cold', 'warm'],
+            ['love', 'hate'],
+            ['head', 'tail'],
+            ['dark', 'light'],
+            ['left', 'right']
+        ];
+
+        let currentPair;
+        let currentWord;
+        let targetWord;
+        let wordHistory = [];
+
+        function initGame() {
+            currentPair = words[Math.floor(Math.random() * words.length)];
+            currentWord = currentPair[0];
+            targetWord = currentPair[1];
+            wordHistory = [currentWord];
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            document.getElementById('currentWord').textContent = `Current: ${currentWord} → Target: ${targetWord}`;
+            document.getElementById('wordHistory').innerHTML = wordHistory
+                .map((word, index) => `<p>${index + 1}. ${word}</p>`)
+                .join('');
+            document.getElementById('wordInput').value = '';
+        }
+
+        function showMessage(text, isError = false) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${isError ? 'error' : 'success'}`;
+            setTimeout(() => {
+                messageDiv.textContent = '';
+                messageDiv.className = 'message';
+            }, 3000);
+        }
+
+        function isValidWord(word) {
+            // In a real implementation, you would check against a dictionary
+            // For this demo, we'll just check if it's a 4-letter word
+            return word.length === 4 && /^[a-zA-Z]+$/.test(word);
+        }
+
+        function differsByOneLetter(word1, word2) {
+            let differences = 0;
+            for (let i = 0; i < word1.length; i++) {
+                if (word1[i].toLowerCase() !== word2[i].toLowerCase()) {
+                    differences++;
+                }
+            }
+            return differences === 1;
+        }
+
+        function submitWord() {
+            const input = document.getElementById('wordInput').value.toLowerCase();
+            
+            if (!isValidWord(input)) {
+                showMessage('Please enter a valid 4-letter word', true);
+                return;
+            }
+
+            if (wordHistory.includes(input)) {
+                showMessage('This word has already been used', true);
+                return;
+            }
+
+            if (!differsByOneLetter(currentWord, input)) {
+                showMessage('The new word must differ by exactly one letter', true);
+                return;
+            }
+
+            currentWord = input;
+            wordHistory.push(input);
+            updateDisplay();
+
+            if (input === targetWord) {
+                showMessage('Congratulations! You solved the puzzle!');
+                setTimeout(() => {
+                    if (confirm('Would you like to play again?')) {
+                        newGame();
+                    }
+                }, 1000);
+            }
+        }
+
+        function newGame() {
+            initGame();
+            showMessage('New game started!');
+        }
+
+        function showHint() {
+            const currentLetters = currentWord.split('');
+            const targetLetters = targetWord.split('');
+            let hint = '';
+            
+            for (let i = 0; i < currentLetters.length; i++) {
+                if (currentLetters[i] !== targetLetters[i]) {
+                    hint = `Try changing the ${i + 1}${getOrdinalSuffix(i + 1)} letter from '${currentLetters[i]}' to '${targetLetters[i]}'`;
+                    break;
+                }
+            }
+            
+            showMessage(hint);
+        }
+
+        function getOrdinalSuffix(n) {
+            const s = ['th', 'st', 'nd', 'rd'];
+            const v = n % 100;
+            return s[(v - 20) % 10] || s[v] || s[0];
+        }
+
+        // Initialize the game when the page loads
+        window.onload = initGame;
+
+        // Allow submitting with Enter key
+        document.getElementById('wordInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                submitWord();
+            }
+        });
+    </script>
+</body>
+</html> 
