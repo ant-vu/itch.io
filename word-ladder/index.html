@@ -53,6 +53,49 @@
             text-align: center;
         }
 
+        .high-scores {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+
+        .high-scores h3 {
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .streak-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.5rem;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .possible-words {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .possible-words p {
+            margin: 0.2rem 0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .possible-words p:hover {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.2rem;
+            border-radius: 4px;
+        }
+
         .word-display {
             font-size: 2rem;
             text-align: center;
@@ -195,6 +238,8 @@
                 <option value="easy">Easy (4 letters)</option>
                 <option value="medium">Medium (5 letters)</option>
                 <option value="hard">Hard (6 letters)</option>
+                <option value="expert">Expert (7 letters)</option>
+                <option value="master">Master (8 letters)</option>
             </select>
         </div>
         <div class="stats">
@@ -221,6 +266,11 @@
         </div>
         <div class="message" id="message"></div>
         <div class="word-history" id="wordHistory"></div>
+        <div class="possible-words" id="possibleWords"></div>
+        <div class="high-scores">
+            <h3>High Scores</h3>
+            <div id="highScores"></div>
+        </div>
         <div class="controls">
             <button onclick="newGame()">New Game</button>
             <button onclick="showHint()">Hint</button>
@@ -250,6 +300,20 @@
                 ['silent', 'listen'],
                 ['garden', 'flower'],
                 ['dragon', 'phoenix']
+            ],
+            expert: [
+                ['journey', 'destiny'],
+                ['freedom', 'liberty'],
+                ['wisdom', 'knowledge'],
+                ['courage', 'bravery'],
+                ['success', 'victory']
+            ],
+            master: [
+                ['adventure', 'challenge'],
+                ['brilliant', 'genius'],
+                ['creativity', 'imagination'],
+                ['determine', 'conclude'],
+                ['education', 'knowledge']
             ]
         };
 
@@ -263,6 +327,8 @@
         let timer;
         let soundEnabled = true;
         let currentDifficulty = 'easy';
+        let streak = 0;
+        let highScores = JSON.parse(localStorage.getItem('wordLadderHighScores')) || {};
 
         const correctSound = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU');
         const errorSound = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU');
@@ -280,6 +346,8 @@
             updateDisplay();
             startTimer();
             updateProgressBar();
+            updatePossibleWords();
+            updateHighScores();
         }
 
         function updateDisplay() {
@@ -307,7 +375,7 @@
         }
 
         function isValidWord(word) {
-            const length = currentDifficulty === 'easy' ? 4 : currentDifficulty === 'medium' ? 5 : 6;
+            const length = currentDifficulty === 'easy' ? 4 : currentDifficulty === 'medium' ? 5 : currentDifficulty === 'hard' ? 6 : currentDifficulty === 'expert' ? 7 : 8;
             return word.length === length && /^[a-zA-Z]+$/.test(word);
         }
 
@@ -325,7 +393,7 @@
             const input = document.getElementById('wordInput').value.toLowerCase();
             
             if (!isValidWord(input)) {
-                showMessage(`Please enter a valid ${currentDifficulty === 'easy' ? '4' : currentDifficulty === 'medium' ? '5' : '6'}-letter word`, true);
+                showMessage(`Please enter a valid ${currentDifficulty === 'easy' ? '4' : currentDifficulty === 'medium' ? '5' : currentDifficulty === 'hard' ? '6' : currentDifficulty === 'expert' ? '7' : '8'}-letter word`, true);
                 return;
             }
 
@@ -345,6 +413,7 @@
             score += 10;
             updateDisplay();
             updateProgressBar();
+            updatePossibleWords();
 
             const wordDisplay = document.getElementById('currentWord');
             wordDisplay.classList.add('pulse');
@@ -355,7 +424,9 @@
                 clearInterval(timer);
                 const timeBonus = timeLeft * 2;
                 score += timeBonus;
-                showMessage(`Congratulations! You solved the puzzle! +${timeBonus} time bonus!`);
+                streak++;
+                showMessage(`Congratulations! You solved the puzzle! +${timeBonus} time bonus! Streak: ${streak}`);
+                saveHighScore();
                 setTimeout(() => {
                     if (confirm('Would you like to play again?')) {
                         newGame();
@@ -421,6 +492,58 @@
 
         function changeDifficulty() {
             newGame();
+        }
+
+        function updateHighScores() {
+            const highScoresDiv = document.getElementById('highScores');
+            const scores = highScores[currentDifficulty] || [];
+            highScoresDiv.innerHTML = scores
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 5)
+                .map((score, index) => `<p>${index + 1}. ${score.score} points (${score.moves} moves)</p>`)
+                .join('');
+        }
+
+        function saveHighScore() {
+            if (!highScores[currentDifficulty]) {
+                highScores[currentDifficulty] = [];
+            }
+            highScores[currentDifficulty].push({
+                score: score,
+                moves: moves,
+                date: new Date().toISOString()
+            });
+            localStorage.setItem('wordLadderHighScores', JSON.stringify(highScores));
+            updateHighScores();
+        }
+
+        function updatePossibleWords() {
+            const possibleWordsDiv = document.getElementById('possibleWords');
+            const possibleWords = generatePossibleWords(currentWord);
+            possibleWordsDiv.innerHTML = possibleWords
+                .map(word => `<p onclick="usePossibleWord('${word}')">${word}</p>`)
+                .join('');
+        }
+
+        function generatePossibleWords(word) {
+            const possibleWords = [];
+            const letters = 'abcdefghijklmnopqrstuvwxyz';
+            
+            for (let i = 0; i < word.length; i++) {
+                for (let j = 0; j < letters.length; j++) {
+                    const newWord = word.slice(0, i) + letters[j] + word.slice(i + 1);
+                    if (newWord !== word && isValidWord(newWord) && !wordHistory.includes(newWord)) {
+                        possibleWords.push(newWord);
+                    }
+                }
+            }
+            
+            return possibleWords.slice(0, 5); // Show only 5 possible words
+        }
+
+        function usePossibleWord(word) {
+            document.getElementById('wordInput').value = word;
+            submitWord();
         }
 
         // Initialize the game when the page loads
