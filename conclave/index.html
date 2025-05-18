@@ -98,6 +98,7 @@
             border-radius: 15px;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 100;
         }
 
         .relation-indicator {
@@ -341,6 +342,115 @@
         h1, h2, h3 {
             font-family: 'Playfair Display', serif;
         }
+
+        .achievement-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 8px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.2s ease;
+        }
+
+        .achievement-item:hover {
+            transform: translateX(5px);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .achievements-list {
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+
+        .achievements-list h3 {
+            margin-bottom: 15px;
+            color: #FFD700;
+        }
+
+        .game-over-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+        }
+
+        .game-over-stat {
+            text-align: center;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+
+        .game-over-stat .label {
+            font-size: 0.9em;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+
+        .game-over-stat .value {
+            font-size: 1.2em;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .save-load-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+
+        .save-load-buttons .control-btn {
+            min-width: 120px;
+        }
+
+        .history-log {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            width: 300px;
+            font-size: 0.9em;
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .history-entry {
+            margin-bottom: 10px;
+            padding: 5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .history-entry strong {
+            color: #FFD700;
+        }
+
+        .history-entry small {
+            color: #aaa;
+            display: block;
+            margin-top: 3px;
+        }
+
+        @keyframes achievementUnlock {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .achievement.unlocked {
+            animation: achievementUnlock 0.5s ease;
+        }
     </style>
 </head>
 <body>
@@ -491,6 +601,49 @@
                         card.influence -= 8;
                     }
                 }
+            },
+            {
+                title: "Papal Library Discovery",
+                description: "A hidden section of the Vatican Library reveals ancient texts.",
+                effect: (card) => {
+                    if (card.traits.includes("Scholar")) {
+                        card.influence += 15;
+                        card.experience += 10;
+                    }
+                }
+            },
+            {
+                title: "Global Pandemic",
+                description: "A health crisis requires decisive leadership and medical expertise.",
+                effect: (card) => {
+                    if (card.traits.includes("Medical Expert")) {
+                        card.influence += 25;
+                    } else {
+                        card.diplomacy += 10;
+                    }
+                }
+            },
+            {
+                title: "Environmental Crisis",
+                description: "Growing concerns about climate change require new perspectives.",
+                effect: (card) => {
+                    if (card.traits.includes("Environmentalist")) {
+                        card.influence += 20;
+                    } else if (card.stance === "Reformist") {
+                        card.influence += 10;
+                    }
+                }
+            },
+            {
+                title: "Digital Age Challenge",
+                description: "The Church faces new challenges in the digital era.",
+                effect: (card) => {
+                    if (card.traits.includes("Tech Savvy")) {
+                        card.influence += 18;
+                    } else if (card.stance === "Traditionalist") {
+                        card.influence -= 5;
+                    }
+                }
             }
         ];
 
@@ -534,6 +687,42 @@
                 title: "Power Master",
                 description: "Use all special abilities in a single conclave",
                 check: () => usedPowers.size === 3
+            },
+            {
+                id: "medical_expert",
+                title: "Healing Hands",
+                description: "Elect a cardinal with medical expertise",
+                check: (card) => card.traits.includes("Medical Expert")
+            },
+            {
+                id: "environmental_win",
+                title: "Green Future",
+                description: "Elect an environmentally conscious cardinal",
+                check: (card) => card.traits.includes("Environmentalist")
+            },
+            {
+                id: "tech_revolution",
+                title: "Digital Pioneer",
+                description: "Elect a tech-savvy cardinal",
+                check: (card) => card.traits.includes("Tech Savvy")
+            },
+            {
+                id: "perfect_diplomacy",
+                title: "Master Diplomat",
+                description: "Maintain perfect faction relations for 5 turns",
+                check: () => {
+                    const relations = Object.values(factionRelations);
+                    return relations.every(r => r >= 80);
+                }
+            },
+            {
+                id: "scholar_win",
+                title: "Wisdom Keeper",
+                description: "Elect a cardinal with multiple scholarly traits",
+                check: (card) => {
+                    const scholarTraits = ["Scholar", "Theologian", "Traditionalist"];
+                    return scholarTraits.filter(trait => card.traits.includes(trait)).length >= 2;
+                }
             }
         ];
 
@@ -628,6 +817,51 @@
                 traits: ["Traditionalist", "Scholar", "Defender"],
                 specialAbility: "Can strengthen traditionalist support",
                 power: "Doctrinal Shield"
+            },
+            {
+                name: "Cardinal Maria",
+                image: "https://picsum.photos/200/306",
+                description: "Medical expert with a focus on global health initiatives.",
+                stance: "Reformist",
+                influence: 82,
+                diplomacy: 88,
+                charisma: 85,
+                experience: 78,
+                scandals: 0,
+                faction: "Reformist",
+                traits: ["Medical Expert", "Humanitarian", "Tech Savvy"],
+                specialAbility: "Can improve Vatican's global health initiatives",
+                power: "Healing Touch"
+            },
+            {
+                name: "Cardinal Thomas",
+                image: "https://picsum.photos/200/307",
+                description: "Environmental advocate with a vision for sustainable practices.",
+                stance: "Moderate",
+                influence: 78,
+                diplomacy: 82,
+                charisma: 75,
+                experience: 80,
+                scandals: 0,
+                faction: "Moderate",
+                traits: ["Environmentalist", "Scholar", "Diplomat"],
+                specialAbility: "Can implement eco-friendly Vatican policies",
+                power: "Green Initiative"
+            },
+            {
+                name: "Cardinal Lucas",
+                image: "https://picsum.photos/200/308",
+                description: "Tech-savvy cardinal pushing for digital transformation.",
+                stance: "Reformist",
+                influence: 75,
+                diplomacy: 80,
+                charisma: 85,
+                experience: 70,
+                scandals: 1,
+                faction: "Reformist",
+                traits: ["Tech Savvy", "Innovator", "Modernist"],
+                specialAbility: "Can modernize Vatican's digital presence",
+                power: "Digital Revolution"
             }
         ];
 
@@ -665,9 +899,7 @@
 
         function addToHistory(card, decision) {
             const entry = document.createElement("div");
-            entry.style.marginBottom = "10px";
-            entry.style.padding = "5px";
-            entry.style.borderBottom = "1px solid rgba(255, 255, 255, 0.1)";
+            entry.className = "history-entry";
             entry.innerHTML = `
                 <strong>${card.name}</strong> was ${decision === "right" ? "elected" : "rejected"}
                 <br>
@@ -756,7 +988,7 @@
 
         function showAchievement(achievement) {
             const achievementElement = document.createElement("div");
-            achievementElement.className = "achievement";
+            achievementElement.className = "achievement-item";
             achievementElement.innerHTML = `
                 <h4>🏆 ${achievement.title}</h4>
                 <p>${achievement.description}</p>
@@ -771,7 +1003,7 @@
         function calculateScore(card, direction) {
             let points = 0;
             if (direction === "right") {
-                // Electing a cardinal
+                // Base points from stats
                 points += card.influence * 0.5;
                 points += card.diplomacy * 0.3;
                 points += card.charisma * 0.2;
@@ -784,6 +1016,22 @@
                 if (card.traits.includes("Scholar")) points += 20;
                 if (card.traits.includes("Diplomat")) points += 25;
                 if (card.traits.includes("Peacemaker")) points += 30;
+                if (card.traits.includes("Medical Expert")) points += 35;
+                if (card.traits.includes("Environmentalist")) points += 30;
+                if (card.traits.includes("Tech Savvy")) points += 25;
+                
+                // Special trait combinations
+                if (card.traits.includes("Scholar") && card.traits.includes("Theologian")) points += 15;
+                if (card.traits.includes("Diplomat") && card.traits.includes("Peacemaker")) points += 20;
+                if (card.traits.includes("Tech Savvy") && card.traits.includes("Innovator")) points += 25;
+                
+                // Reputation bonus
+                points += reputation * 0.2;
+                
+                // Faction relations bonus
+                const relations = Object.values(factionRelations);
+                const avgRelation = relations.reduce((a, b) => a + b, 0) / relations.length;
+                points += avgRelation * 0.1;
             } else {
                 // Rejecting a cardinal
                 points += card.scandals * 10;
@@ -791,6 +1039,11 @@
                 
                 // Faction penalty
                 points -= factionSupport[card.faction] * 0.3;
+                
+                // Reputation penalty for rejecting highly qualified candidates
+                if (card.influence > 80 && card.diplomacy > 80) {
+                    points -= 15;
+                }
             }
             return Math.round(points);
         }
@@ -1033,6 +1286,89 @@
             progressElement.style.width = `${(currentCardIndex / cards.length) * 100}%`;
         }
 
+        function saveGame() {
+            const gameState = {
+                currentCardIndex,
+                score,
+                factionSupport,
+                unlockedAchievements: Array.from(unlockedAchievements),
+                usedPowers: Array.from(usedPowers),
+                decisionHistory,
+                reputation,
+                factionRelations
+            };
+            localStorage.setItem('conclaveGameState', JSON.stringify(gameState));
+            showMessage('Game saved successfully!');
+        }
+
+        function loadGame() {
+            const savedState = localStorage.getItem('conclaveGameState');
+            if (savedState) {
+                const gameState = JSON.parse(savedState);
+                currentCardIndex = gameState.currentCardIndex;
+                score = gameState.score;
+                factionSupport = gameState.factionSupport;
+                unlockedAchievements = new Set(gameState.unlockedAchievements);
+                usedPowers = new Set(gameState.usedPowers);
+                decisionHistory = gameState.decisionHistory;
+                reputation = gameState.reputation;
+                factionRelations = gameState.factionRelations;
+
+                updateScore(0); // Refresh display
+                updateFactionBars();
+                updateReputation(0);
+                showMessage('Game loaded successfully!');
+                renderNextCard();
+            } else {
+                showMessage('No saved game found', true);
+            }
+        }
+
+        function showGameOver() {
+            const finalScore = score;
+            const achievementsEarned = unlockedAchievements.size;
+            const totalAchievements = achievements.length;
+            const mostInfluentialFaction = Object.entries(factionSupport)
+                .reduce((a, b) => a[1] > b[1] ? a : b)[0];
+            
+            const gameOverHTML = `
+                <div class="card" style="text-align: center; padding: 20px;">
+                    <h2>Conclave Complete!</h2>
+                    <div class="game-over-stats">
+                        <div class="game-over-stat">
+                            <div class="label">Final Score</div>
+                            <div class="value">${finalScore}</div>
+                        </div>
+                        <div class="game-over-stat">
+                            <div class="label">Achievements</div>
+                            <div class="value">${achievementsEarned}/${totalAchievements}</div>
+                        </div>
+                        <div class="game-over-stat">
+                            <div class="label">Most Influential Faction</div>
+                            <div class="value">${mostInfluentialFaction}</div>
+                        </div>
+                        <div class="game-over-stat">
+                            <div class="label">Final Reputation</div>
+                            <div class="value">${reputation}</div>
+                        </div>
+                    </div>
+                    <div class="achievements-list">
+                        <h3>Unlocked Achievements</h3>
+                        ${Array.from(unlockedAchievements).map(id => {
+                            const achievement = achievements.find(a => a.id === id);
+                            return `<div class="achievement-item">🏆 ${achievement.title}</div>`;
+                        }).join('')}
+                    </div>
+                    <div class="save-load-buttons">
+                        <button class="control-btn" onclick="location.reload()">Start New Conclave</button>
+                        <button class="control-btn" onclick="saveGame()">Save Game</button>
+                        <button class="control-btn" onclick="loadGame()">Load Game</button>
+                    </div>
+                </div>
+            `;
+            cardContainer.innerHTML = gameOverHTML;
+        }
+
         function renderNextCard() {
             if (currentCardIndex < cards.length) {
                 const nextCard = createCard(cards[currentCardIndex]);
@@ -1091,14 +1427,7 @@
                     currentX = 0;
                 });
             } else {
-                // Game over
-                cardContainer.innerHTML = `
-                    <div class="card" style="text-align: center; padding: 20px;">
-                        <h2>Conclave Complete!</h2>
-                        <p>Final Score: ${score}</p>
-                        <button class="control-btn" onclick="location.reload()">Start New Conclave</button>
-                    </div>
-                `;
+                showGameOver();
             }
         }
 
