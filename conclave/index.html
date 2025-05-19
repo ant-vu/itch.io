@@ -451,6 +451,119 @@
         .achievement.unlocked {
             animation: achievementUnlock 0.5s ease;
         }
+
+        .difficulty-selector {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .difficulty-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .difficulty-option {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: transform 0.2s ease, background 0.2s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .difficulty-option:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .difficulty-stats {
+            margin-top: 15px;
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        .difficulty-stats div {
+            margin: 5px 0;
+        }
+
+        .stats-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .stats-content {
+            background: rgba(42, 42, 42, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-label {
+            color: #aaa;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .current-legacy {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .legacy-info {
+            margin-top: 10px;
+        }
+
+        .legacy-achievement {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(42, 42, 42, 0.95);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 1000;
+            animation: slideDown 0.5s ease;
+        }
+
+        @keyframes slideDown {
+            from { transform: translate(-50%, -100%); }
+            to { transform: translate(-50%, 0); }
+        }
     </style>
 </head>
 <body>
@@ -1247,37 +1360,8 @@
             if (!currentCard) return;
 
             const card = cards[currentCardIndex - 1];
-            const points = calculateScore(card, direction);
-            updateScore(points);
-            updateFactionSupport(card, direction);
-            updateFactionRelations(card, direction);
-            updateReputation(points * 0.1);
-            checkAchievements(card);
-            addToHistory(card, direction);
-
-            // Show visual feedback
-            const rect = currentCard.getBoundingClientRect();
-            showVisualFeedback(
-                `${points > 0 ? '+' : ''}${points}`,
-                rect.left + rect.width / 2,
-                rect.top + rect.height / 2,
-                points > 0 ? '#4CAF50' : '#FF4444'
-            );
-
-            if (direction === "left") {
-                currentCard.classList.add("swipe-left");
-            } else if (direction === "right") {
-                currentCard.classList.add("swipe-right");
-            }
-
-            setTimeout(() => {
-                currentCard.remove();
-                const event = showEvent();
-                if (event) {
-                    event.effect(card);
-                }
-                renderNextCard();
-            }, 500);
+            updateLegacyProgress(card, direction);
+            originalSwipeCard(direction);
         }
 
         function updateScore(points) {
@@ -1434,6 +1518,514 @@
         // Start the game with tutorial
         showTutorial();
         renderNextCard();
+
+        const difficulties = {
+            easy: {
+                name: "Novice",
+                description: "Perfect for learning the basics",
+                modifiers: {
+                    influenceMultiplier: 1.2,
+                    reputationMultiplier: 1.2,
+                    eventChance: 0.2,
+                    specialRoundChance: 0.1
+                }
+            },
+            normal: {
+                name: "Cardinal",
+                description: "Standard challenge",
+                modifiers: {
+                    influenceMultiplier: 1.0,
+                    reputationMultiplier: 1.0,
+                    eventChance: 0.3,
+                    specialRoundChance: 0.2
+                }
+            },
+            hard: {
+                name: "Archbishop",
+                description: "For experienced players",
+                modifiers: {
+                    influenceMultiplier: 0.8,
+                    reputationMultiplier: 0.8,
+                    eventChance: 0.4,
+                    specialRoundChance: 0.3
+                }
+            },
+            expert: {
+                name: "Papal",
+                description: "The ultimate challenge",
+                modifiers: {
+                    influenceMultiplier: 0.6,
+                    reputationMultiplier: 0.6,
+                    eventChance: 0.5,
+                    specialRoundChance: 0.4
+                }
+            }
+        };
+
+        const specialRounds = [
+            {
+                title: "Papal Conclave Crisis",
+                description: "A major decision must be made that will affect the future of the Church.",
+                options: [
+                    {
+                        text: "Maintain Traditional Values",
+                        effect: () => {
+                            factionSupport.Traditionalist += 15;
+                            reputation += 10;
+                        }
+                    },
+                    {
+                        text: "Embrace Modern Reforms",
+                        effect: () => {
+                            factionSupport.Reformist += 15;
+                            reputation += 10;
+                        }
+                    },
+                    {
+                        text: "Seek Middle Ground",
+                        effect: () => {
+                            factionSupport.Moderate += 15;
+                            reputation += 5;
+                        }
+                    }
+                ]
+            },
+            {
+                title: "Global Humanitarian Crisis",
+                description: "A devastating natural disaster requires immediate action.",
+                options: [
+                    {
+                        text: "Mobilize Medical Resources",
+                        effect: () => {
+                            if (currentCard.traits.includes("Medical Expert")) {
+                                reputation += 20;
+                                score += 100;
+                            } else {
+                                reputation += 10;
+                            }
+                        }
+                    },
+                    {
+                        text: "Coordinate International Aid",
+                        effect: () => {
+                            if (currentCard.traits.includes("Diplomat")) {
+                                reputation += 15;
+                                score += 80;
+                            } else {
+                                reputation += 8;
+                            }
+                        }
+                    },
+                    {
+                        text: "Focus on Local Relief",
+                        effect: () => {
+                            reputation += 5;
+                            score += 50;
+                        }
+                    }
+                ]
+            },
+            {
+                title: "Doctrinal Debate",
+                description: "A heated theological discussion divides the conclave.",
+                options: [
+                    {
+                        text: "Uphold Traditional Doctrine",
+                        effect: () => {
+                            if (currentCard.stance === "Traditionalist") {
+                                factionSupport.Traditionalist += 20;
+                                score += 90;
+                            } else {
+                                factionSupport.Traditionalist += 10;
+                            }
+                        }
+                    },
+                    {
+                        text: "Propose Modern Interpretation",
+                        effect: () => {
+                            if (currentCard.stance === "Reformist") {
+                                factionSupport.Reformist += 20;
+                                score += 90;
+                            } else {
+                                factionSupport.Reformist += 10;
+                            }
+                        }
+                    },
+                    {
+                        text: "Seek Consensus",
+                        effect: () => {
+                            factionSupport.Moderate += 15;
+                            score += 70;
+                        }
+                    }
+                ]
+            },
+            {
+                title: "Vatican Finances",
+                description: "A critical decision about the Church's financial future.",
+                options: [
+                    {
+                        text: "Implement Austerity Measures",
+                        effect: () => {
+                            if (currentCard.traits.includes("Financial Expert")) {
+                                reputation += 15;
+                                score += 85;
+                            } else {
+                                reputation += 5;
+                            }
+                        }
+                    },
+                    {
+                        text: "Modernize Financial Systems",
+                        effect: () => {
+                            if (currentCard.traits.includes("Tech Savvy")) {
+                                reputation += 15;
+                                score += 85;
+                            } else {
+                                reputation += 5;
+                            }
+                        }
+                    },
+                    {
+                        text: "Maintain Current Policies",
+                        effect: () => {
+                            reputation += 3;
+                            score += 40;
+                        }
+                    }
+                ]
+            }
+        ];
+
+        let currentDifficulty = 'normal';
+        let gameStats = {
+            totalGames: 0,
+            highestScore: 0,
+            achievementsUnlocked: 0,
+            totalPlayTime: 0,
+            cardsElected: 0,
+            cardsRejected: 0,
+            specialRoundsCompleted: 0,
+            eventsTriggered: 0
+        };
+
+        function loadStats() {
+            const savedStats = localStorage.getItem('conclaveGameStats');
+            if (savedStats) {
+                gameStats = JSON.parse(savedStats);
+            }
+        }
+
+        function saveStats() {
+            localStorage.setItem('conclaveGameStats', JSON.stringify(gameStats));
+        }
+
+        function updateStats() {
+            gameStats.totalGames++;
+            gameStats.highestScore = Math.max(gameStats.highestScore, score);
+            gameStats.achievementsUnlocked = unlockedAchievements.size;
+            gameStats.cardsElected = decisionHistory.filter(d => d.decision === 'right').length;
+            gameStats.cardsRejected = decisionHistory.filter(d => d.decision === 'left').length;
+            saveStats();
+        }
+
+        function showDifficultySelector() {
+            const selectorHTML = `
+                <div class="difficulty-selector">
+                    <h2>Select Difficulty</h2>
+                    <div class="difficulty-options">
+                        ${Object.entries(difficulties).map(([key, diff]) => `
+                            <div class="difficulty-option" onclick="selectDifficulty('${key}')">
+                                <h3>${diff.name}</h3>
+                                <p>${diff.description}</p>
+                                <div class="difficulty-stats">
+                                    <div>Influence: ${diff.modifiers.influenceMultiplier}x</div>
+                                    <div>Reputation: ${diff.modifiers.reputationMultiplier}x</div>
+                                    <div>Events: ${diff.modifiers.eventChance * 100}%</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            cardContainer.innerHTML = selectorHTML;
+        }
+
+        function selectDifficulty(difficulty) {
+            currentDifficulty = difficulty;
+            const modifiers = difficulties[difficulty].modifiers;
+            
+            // Apply difficulty modifiers
+            cards.forEach(card => {
+                card.influence = Math.round(card.influence * modifiers.influenceMultiplier);
+                card.diplomacy = Math.round(card.diplomacy * modifiers.influenceMultiplier);
+                card.charisma = Math.round(card.charisma * modifiers.influenceMultiplier);
+            });
+
+            showTutorial();
+            renderNextCard();
+        }
+
+        function showEvent() {
+            const modifiers = difficulties[currentDifficulty].modifiers;
+            if (Math.random() < modifiers.eventChance) {
+                const event = events[Math.floor(Math.random() * events.length)];
+                document.getElementById("event-title").textContent = event.title;
+                document.getElementById("event-description").textContent = event.description;
+                eventPopup.style.display = "block";
+                gameStats.eventsTriggered++;
+                return event;
+            }
+            return null;
+        }
+
+        function triggerSpecialVotingRound() {
+            const modifiers = difficulties[currentDifficulty].modifiers;
+            if (Math.random() < modifiers.specialRoundChance) {
+                specialVotingRound = true;
+                const round = specialRounds[Math.floor(Math.random() * specialRounds.length)];
+                document.getElementById('voting-round').style.display = 'block';
+                document.getElementById('voting-round-description').textContent = round.description;
+                
+                const optionsContainer = document.getElementById('voting-round-options');
+                optionsContainer.innerHTML = '';
+                round.options.forEach(option => {
+                    const button = document.createElement('button');
+                    button.className = 'control-btn';
+                    button.textContent = option.text;
+                    button.onclick = () => {
+                        option.effect();
+                        document.getElementById('voting-round').style.display = 'none';
+                        specialVotingRound = false;
+                        updateFactionBars();
+                        gameStats.specialRoundsCompleted++;
+                    };
+                    optionsContainer.appendChild(button);
+                });
+            }
+        }
+
+        // Modify the start of the game to show difficulty selector
+        window.onload = function() {
+            loadStats();
+            showDifficultySelector();
+        };
+
+        const papalLegacies = [
+            {
+                id: "traditional_legacy",
+                title: "Guardian of Tradition",
+                description: "Strengthened traditional values and practices",
+                requirements: {
+                    traditionalistSupport: 60,
+                    reputation: 70
+                },
+                effects: {
+                    factionSupport: { Traditionalist: 10 },
+                    reputation: 15
+                }
+            },
+            {
+                id: "reform_legacy",
+                title: "Agent of Change",
+                description: "Pioneered significant reforms in the Church",
+                requirements: {
+                    reformistSupport: 60,
+                    reputation: 70
+                },
+                effects: {
+                    factionSupport: { Reformist: 10 },
+                    reputation: 15
+                }
+            },
+            {
+                id: "diplomatic_legacy",
+                title: "Master Diplomat",
+                description: "Achieved unprecedented unity among factions",
+                requirements: {
+                    factionRelations: 80,
+                    reputation: 80
+                },
+                effects: {
+                    factionSupport: { Moderate: 10 },
+                    reputation: 20
+                }
+            },
+            {
+                id: "scholarly_legacy",
+                title: "Great Scholar",
+                description: "Advanced theological understanding and education",
+                requirements: {
+                    electedScholars: 3,
+                    reputation: 75
+                },
+                effects: {
+                    influence: 15,
+                    reputation: 15
+                }
+            }
+        ];
+
+        let currentLegacy = null;
+        let legacyProgress = {
+            traditionalistSupport: 0,
+            reformistSupport: 0,
+            factionRelations: 0,
+            electedScholars: 0
+        };
+
+        function updateLegacyProgress(card, decision) {
+            if (decision === 'right') {
+                if (card.stance === "Traditionalist") {
+                    legacyProgress.traditionalistSupport += 10;
+                } else if (card.stance === "Reformist") {
+                    legacyProgress.reformistSupport += 10;
+                }
+                
+                if (card.traits.includes("Scholar")) {
+                    legacyProgress.electedScholars++;
+                }
+
+                const relations = Object.values(factionRelations);
+                legacyProgress.factionRelations = relations.reduce((a, b) => a + b, 0) / relations.length;
+
+                checkLegacyAchievement();
+            }
+        }
+
+        function checkLegacyAchievement() {
+            if (currentLegacy) return;
+
+            for (const legacy of papalLegacies) {
+                const requirements = legacy.requirements;
+                let achieved = true;
+
+                if (requirements.traditionalistSupport && 
+                    legacyProgress.traditionalistSupport < requirements.traditionalistSupport) {
+                    achieved = false;
+                }
+                if (requirements.reformistSupport && 
+                    legacyProgress.reformistSupport < requirements.reformistSupport) {
+                    achieved = false;
+                }
+                if (requirements.factionRelations && 
+                    legacyProgress.factionRelations < requirements.factionRelations) {
+                    achieved = false;
+                }
+                if (requirements.electedScholars && 
+                    legacyProgress.electedScholars < requirements.electedScholars) {
+                    achieved = false;
+                }
+                if (requirements.reputation && reputation < requirements.reputation) {
+                    achieved = false;
+                }
+
+                if (achieved) {
+                    currentLegacy = legacy;
+                    applyLegacyEffects(legacy);
+                    showLegacyAchievement(legacy);
+                    break;
+                }
+            }
+        }
+
+        function applyLegacyEffects(legacy) {
+            if (legacy.effects.factionSupport) {
+                Object.entries(legacy.effects.factionSupport).forEach(([faction, value]) => {
+                    factionSupport[faction] += value;
+                });
+            }
+            if (legacy.effects.reputation) {
+                reputation += legacy.effects.reputation;
+            }
+            if (legacy.effects.influence) {
+                cards.forEach(card => {
+                    card.influence += legacy.effects.influence;
+                });
+            }
+            updateFactionBars();
+            updateReputation(0);
+        }
+
+        function showLegacyAchievement(legacy) {
+            const legacyElement = document.createElement("div");
+            legacyElement.className = "legacy-achievement";
+            legacyElement.innerHTML = `
+                <h3>🏆 Legacy Achieved: ${legacy.title}</h3>
+                <p>${legacy.description}</p>
+            `;
+            document.body.appendChild(legacyElement);
+            setTimeout(() => legacyElement.remove(), 5000);
+        }
+
+        function showStats() {
+            const statsHTML = `
+                <div class="stats-overlay">
+                    <div class="stats-content">
+                        <h2>Game Statistics</h2>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-label">Total Games</div>
+                                <div class="stat-value">${gameStats.totalGames}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Highest Score</div>
+                                <div class="stat-value">${gameStats.highestScore}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Achievements Unlocked</div>
+                                <div class="stat-value">${gameStats.achievementsUnlocked}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Cards Elected</div>
+                                <div class="stat-value">${gameStats.cardsElected}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Cards Rejected</div>
+                                <div class="stat-value">${gameStats.cardsRejected}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Special Rounds</div>
+                                <div class="stat-value">${gameStats.specialRoundsCompleted}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Events Triggered</div>
+                                <div class="stat-value">${gameStats.eventsTriggered}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Total Play Time</div>
+                                <div class="stat-value">${Math.floor(gameStats.totalPlayTime / 60)}m ${gameStats.totalPlayTime % 60}s</div>
+                            </div>
+                        </div>
+                        ${currentLegacy ? `
+                            <div class="current-legacy">
+                                <h3>Current Legacy</h3>
+                                <div class="legacy-info">
+                                    <h4>${currentLegacy.title}</h4>
+                                    <p>${currentLegacy.description}</p>
+                                </div>
+                            </div>
+                        ` : ''}
+                        <button class="control-btn" onclick="this.parentElement.parentElement.remove()">Close</button>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', statsHTML);
+        }
+
+        // Add stats button to controls
+        const statsButton = document.createElement('button');
+        statsButton.className = 'control-btn';
+        statsButton.textContent = 'Statistics';
+        statsButton.onclick = showStats;
+        document.querySelector('.controls').appendChild(statsButton);
+
+        // Add play time tracking
+        let gameStartTime = Date.now();
+        setInterval(() => {
+            gameStats.totalPlayTime = Math.floor((Date.now() - gameStartTime) / 1000);
+            saveStats();
+        }, 1000);
     </script>
 </body>
 </html>
