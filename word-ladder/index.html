@@ -224,14 +224,79 @@
         .word-display.pulse {
             animation: pulse 0.5s ease;
         }
+
+        .achievement {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .achievement.locked {
+            opacity: 0.5;
+        }
+
+        .achievement-icon {
+            width: 24px;
+            height: 24px;
+            background: gold;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 1rem 0;
+        }
+
+        .mode-button {
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .mode-button.active {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(1.05);
+        }
+
+        .daily-challenge {
+            background: linear-gradient(45deg, #ff6b6b, #ffd93d);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            text-align: center;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Word Ladder Challenge</h1>
+        <div class="mode-selector">
+            <button class="mode-button active" onclick="setGameMode('classic')">Classic</button>
+            <button class="mode-button" onclick="setGameMode('practice')">Practice</button>
+            <button class="mode-button" onclick="setGameMode('daily')">Daily Challenge</button>
+        </div>
         <div class="game-info">
             <p>Transform the start word into the target word by changing one letter at a time!</p>
             <p>Each new word must be a valid English word.</p>
+        </div>
+        <div id="dailyChallengeInfo" class="daily-challenge" style="display: none;">
+            <p>Daily Challenge: Complete this puzzle to earn bonus points!</p>
+            <p>Time remaining: <span id="dailyTimeRemaining"></span></p>
         </div>
         <div class="difficulty-selector">
             <select id="difficulty" onchange="changeDifficulty()">
@@ -270,6 +335,10 @@
         <div class="high-scores">
             <h3>High Scores</h3>
             <div id="highScores"></div>
+        </div>
+        <div class="achievements">
+            <h3>Achievements</h3>
+            <div id="achievementsList"></div>
         </div>
         <div class="controls">
             <button onclick="newGame()">New Game</button>
@@ -329,10 +398,26 @@
         let currentDifficulty = 'easy';
         let streak = 0;
         let highScores = JSON.parse(localStorage.getItem('wordLadderHighScores')) || {};
+        let gameMode = 'classic';
+        let achievements = JSON.parse(localStorage.getItem('wordLadderAchievements')) || {
+            firstWin: false,
+            streak3: false,
+            streak5: false,
+            perfectScore: false,
+            speedRunner: false,
+            wordMaster: false
+        };
 
         const correctSound = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU');
         const errorSound = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU');
         const winSound = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU');
+
+        const dailyWords = {
+            '2024-03-20': ['start', 'finish'],
+            '2024-03-21': ['light', 'heavy'],
+            '2024-03-22': ['happy', 'sadly'],
+            // Add more daily challenges here
+        };
 
         function initGame() {
             currentDifficulty = document.getElementById('difficulty').value;
@@ -427,6 +512,7 @@
                 streak++;
                 showMessage(`Congratulations! You solved the puzzle! +${timeBonus} time bonus! Streak: ${streak}`);
                 saveHighScore();
+                checkAchievements();
                 setTimeout(() => {
                     if (confirm('Would you like to play again?')) {
                         newGame();
@@ -546,8 +632,119 @@
             submitWord();
         }
 
+        function setGameMode(mode) {
+            gameMode = mode;
+            document.querySelectorAll('.mode-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            if (mode === 'practice') {
+                timeLeft = Infinity;
+                document.getElementById('timer').textContent = '∞';
+                clearInterval(timer);
+            } else if (mode === 'daily') {
+                const today = new Date().toISOString().split('T')[0];
+                if (dailyWords[today]) {
+                    currentPair = dailyWords[today];
+                    currentWord = currentPair[0];
+                    targetWord = currentPair[1];
+                    wordHistory = [currentWord];
+                    moves = 0;
+                    score = 0;
+                    timeLeft = 300; // 5 minutes for daily challenge
+                    updateDisplay();
+                    startTimer();
+                    updateProgressBar();
+                    updatePossibleWords();
+                    document.getElementById('dailyChallengeInfo').style.display = 'block';
+                    updateDailyTimeRemaining();
+                } else {
+                    showMessage('No daily challenge available for today', true);
+                }
+            } else {
+                newGame();
+            }
+        }
+
+        function updateDailyTimeRemaining() {
+            const endOfDay = new Date();
+            endOfDay.setHours(23, 59, 59, 999);
+            const now = new Date();
+            const timeRemaining = endOfDay - now;
+            const hours = Math.floor(timeRemaining / (1000 * 60 * 60));
+            const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
+            document.getElementById('dailyTimeRemaining').textContent = `${hours}h ${minutes}m`;
+        }
+
+        function checkAchievements() {
+            if (!achievements.firstWin && currentWord === targetWord) {
+                achievements.firstWin = true;
+                showMessage('Achievement Unlocked: First Victory!', false);
+            }
+            if (!achievements.streak3 && streak >= 3) {
+                achievements.streak3 = true;
+                showMessage('Achievement Unlocked: Three in a Row!', false);
+            }
+            if (!achievements.streak5 && streak >= 5) {
+                achievements.streak5 = true;
+                showMessage('Achievement Unlocked: Five in a Row!', false);
+            }
+            if (!achievements.perfectScore && score >= 1000) {
+                achievements.perfectScore = true;
+                showMessage('Achievement Unlocked: Perfect Score!', false);
+            }
+            if (!achievements.speedRunner && timeLeft > 45 && currentWord === targetWord) {
+                achievements.speedRunner = true;
+                showMessage('Achievement Unlocked: Speed Runner!', false);
+            }
+            if (!achievements.wordMaster && moves <= 5 && currentWord === targetWord) {
+                achievements.wordMaster = true;
+                showMessage('Achievement Unlocked: Word Master!', false);
+            }
+            localStorage.setItem('wordLadderAchievements', JSON.stringify(achievements));
+            updateAchievements();
+        }
+
+        function updateAchievements() {
+            const achievementsList = document.getElementById('achievementsList');
+            achievementsList.innerHTML = `
+                <div class="achievement ${achievements.firstWin ? '' : 'locked'}">
+                    <div class="achievement-icon">1</div>
+                    <div>First Victory - Win your first game</div>
+                </div>
+                <div class="achievement ${achievements.streak3 ? '' : 'locked'}">
+                    <div class="achievement-icon">2</div>
+                    <div>Three in a Row - Win 3 games in a row</div>
+                </div>
+                <div class="achievement ${achievements.streak5 ? '' : 'locked'}">
+                    <div class="achievement-icon">3</div>
+                    <div>Five in a Row - Win 5 games in a row</div>
+                </div>
+                <div class="achievement ${achievements.perfectScore ? '' : 'locked'}">
+                    <div class="achievement-icon">4</div>
+                    <div>Perfect Score - Score 1000 points</div>
+                </div>
+                <div class="achievement ${achievements.speedRunner ? '' : 'locked'}">
+                    <div class="achievement-icon">5</div>
+                    <div>Speed Runner - Complete a puzzle with 45+ seconds remaining</div>
+                </div>
+                <div class="achievement ${achievements.wordMaster ? '' : 'locked'}">
+                    <div class="achievement-icon">6</div>
+                    <div>Word Master - Complete a puzzle in 5 moves or less</div>
+                </div>
+            `;
+        }
+
         // Initialize the game when the page loads
-        window.onload = initGame;
+        window.onload = function() {
+            initGame();
+            updateAchievements();
+            if (gameMode === 'daily') {
+                updateDailyTimeRemaining();
+                setInterval(updateDailyTimeRemaining, 60000); // Update every minute
+            }
+        };
 
         // Allow submitting with Enter key
         document.getElementById('wordInput').addEventListener('keypress', function(e) {
