@@ -280,9 +280,85 @@
             text-align: center;
             font-weight: bold;
         }
+
+        .theme-switcher {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            display: flex;
+            gap: 5px;
+        }
+
+        .theme-button {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid white;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .theme-button:hover {
+            transform: scale(1.2);
+        }
+
+        .theme-default { background: linear-gradient(135deg, #1a2a6c 0%, #b21f1f 50%, #fdbb2d 100%); }
+        .theme-dark { background: linear-gradient(135deg, #2c3e50 0%, #000000 100%); }
+        .theme-light { background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); }
+        .theme-nature { background: linear-gradient(135deg, #134E5E 0%, #71B280 100%); }
+
+        .word-definition {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            font-style: italic;
+        }
+
+        .stats-panel {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+
+        .stats-panel h3 {
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .share-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+
+        .share-button {
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .share-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
     </style>
 </head>
 <body>
+    <div class="theme-switcher">
+        <div class="theme-button theme-default" onclick="changeTheme('default')"></div>
+        <div class="theme-button theme-dark" onclick="changeTheme('dark')"></div>
+        <div class="theme-button theme-light" onclick="changeTheme('light')"></div>
+        <div class="theme-button theme-nature" onclick="changeTheme('nature')"></div>
+    </div>
     <div class="container">
         <h1>Word Ladder Challenge</h1>
         <div class="mode-selector">
@@ -344,6 +420,19 @@
             <button onclick="newGame()">New Game</button>
             <button onclick="showHint()">Hint</button>
             <button onclick="toggleSound()">Sound: On</button>
+        </div>
+        <div class="word-definition" id="wordDefinition"></div>
+        <div class="stats-panel">
+            <h3>Statistics</h3>
+            <div id="statsContent"></div>
+        </div>
+        <div class="share-buttons">
+            <button class="share-button" onclick="shareScore('twitter')">
+                <span>🐦</span> Share on Twitter
+            </button>
+            <button class="share-button" onclick="shareScore('facebook')">
+                <span>👥</span> Share on Facebook
+            </button>
         </div>
     </div>
 
@@ -408,6 +497,16 @@
             wordMaster: false
         };
 
+        let gameStats = JSON.parse(localStorage.getItem('wordLadderStats')) || {
+            gamesPlayed: 0,
+            totalScore: 0,
+            bestScore: 0,
+            averageMoves: 0,
+            totalMoves: 0,
+            fastestTime: Infinity,
+            wordsSolved: 0
+        };
+
         const correctSound = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU');
         const errorSound = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU');
         const winSound = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU');
@@ -417,6 +516,13 @@
             '2024-03-21': ['light', 'heavy'],
             '2024-03-22': ['happy', 'sadly'],
             // Add more daily challenges here
+        };
+
+        const themes = {
+            default: 'linear-gradient(135deg, #1a2a6c 0%, #b21f1f 50%, #fdbb2d 100%)',
+            dark: 'linear-gradient(135deg, #2c3e50 0%, #000000 100%)',
+            light: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)',
+            nature: 'linear-gradient(135deg, #134E5E 0%, #71B280 100%)'
         };
 
         function initGame() {
@@ -433,6 +539,10 @@
             updateProgressBar();
             updatePossibleWords();
             updateHighScores();
+            const savedTheme = localStorage.getItem('wordLadderTheme') || 'default';
+            changeTheme(savedTheme);
+            updateWordDefinition(currentWord);
+            updateStats();
         }
 
         function updateDisplay() {
@@ -518,6 +628,17 @@
                         newGame();
                     }
                 }, 1000);
+                
+                // Update stats
+                gameStats.gamesPlayed++;
+                gameStats.totalScore += score;
+                gameStats.bestScore = Math.max(gameStats.bestScore, score);
+                gameStats.totalMoves += moves;
+                gameStats.fastestTime = Math.min(gameStats.fastestTime, 60 - timeLeft);
+                gameStats.wordsSolved++;
+                
+                localStorage.setItem('wordLadderStats', JSON.stringify(gameStats));
+                updateStats();
             }
         }
 
@@ -736,6 +857,54 @@
             `;
         }
 
+        function changeTheme(theme) {
+            document.body.style.background = themes[theme];
+            localStorage.setItem('wordLadderTheme', theme);
+        }
+
+        function updateWordDefinition(word) {
+            const definitionDiv = document.getElementById('wordDefinition');
+            // In a real implementation, you would fetch this from a dictionary API
+            const definitions = {
+                'cold': 'Of or at a low or relatively low temperature',
+                'warm': 'Of or at a moderately high temperature',
+                'love': 'An intense feeling of deep affection',
+                'hate': 'Feel intense or passionate dislike for',
+                // Add more definitions as needed
+            };
+            
+            definitionDiv.textContent = definitions[word.toLowerCase()] || 'Definition not available';
+        }
+
+        function updateStats() {
+            const statsContent = document.getElementById('statsContent');
+            statsContent.innerHTML = `
+                <p>Games Played: ${gameStats.gamesPlayed}</p>
+                <p>Total Score: ${gameStats.totalScore}</p>
+                <p>Best Score: ${gameStats.bestScore}</p>
+                <p>Average Moves: ${(gameStats.totalMoves / gameStats.gamesPlayed || 0).toFixed(1)}</p>
+                <p>Fastest Time: ${gameStats.fastestTime === Infinity ? 'N/A' : gameStats.fastestTime + 's'}</p>
+                <p>Words Solved: ${gameStats.wordsSolved}</p>
+            `;
+        }
+
+        function shareScore(platform) {
+            const shareText = `I just scored ${score} points in Word Ladder Challenge! Can you beat my score? 🎮 #WordLadderChallenge`;
+            const shareUrl = encodeURIComponent(window.location.href);
+            
+            let shareLink;
+            switch(platform) {
+                case 'twitter':
+                    shareLink = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${shareUrl}`;
+                    break;
+                case 'facebook':
+                    shareLink = `https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`;
+                    break;
+            }
+            
+            window.open(shareLink, '_blank');
+        }
+
         // Initialize the game when the page loads
         window.onload = function() {
             initGame();
@@ -750,6 +919,13 @@
         document.getElementById('wordInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 submitWord();
+            }
+        });
+
+        // Add event listener for word input to update definition
+        document.getElementById('wordInput').addEventListener('input', function(e) {
+            if (e.target.value.length === currentWord.length) {
+                updateWordDefinition(e.target.value);
             }
         });
     </script>
